@@ -101,8 +101,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public final class MainActivity extends LocalizedActivity {
-    private static final int TAB_HOME = 0, TAB_TV = 1, TAB_GAMES = 2, TAB_EVENTS = 3, TAB_SAVED = 4;
-    private final String[] TAB_TITLES = {AppLanguage.get(R.string.ui_home), AppLanguage.get(R.string.ui_live_tv), AppLanguage.get(R.string.ui_games), AppLanguage.get(R.string.ui_events), AppLanguage.get(R.string.ui_saved)};
+    private static final int TAB_HOME = 0, TAB_TV = 1, TAB_GAMES = 2, TAB_EVENTS = 3, TAB_SAVED = 4, TAB_VOD = 5;
+    private final String[] TAB_TITLES = {AppLanguage.get(R.string.ui_home), AppLanguage.get(R.string.ui_live_tv), AppLanguage.get(R.string.ui_games), AppLanguage.get(R.string.ui_events), AppLanguage.get(R.string.ui_saved), AppLanguage.get(R.string.vod_title)};
+    private LinearLayout onDemandContent;
+    private OnDemandPanel onDemandPanel;
+    private LiveTvPanel liveTvPanel;
     private static final String PREF_HIDE_LIVE_TV = "hideLiveTvNavigation";
     private static final String PREF_HIDE_GAMES = "hideGamesNavigation";
     private static final String PREF_HIDE_EVENTS = "hideEventsNavigation";
@@ -274,7 +277,7 @@ public final class MainActivity extends LocalizedActivity {
             focusedPackage = state.getString("focusedPackage");
             savedListState = state.getParcelable("savedListState");
             gamesListState = state.getParcelable("gamesListState");
-            activeTab = Math.max(TAB_HOME, Math.min(TAB_SAVED, state.getInt("activeTab", TAB_HOME)));
+            activeTab = Math.max(TAB_HOME, Math.min(TAB_VOD, state.getInt("activeTab", TAB_HOME)));
             for (int i = 0; i < tabScroll.length; i++) tabScroll[i] = state.getInt("tabScroll" + i, 0);
             tabScroll[TAB_HOME] = 0;
             try { selectedCalendarDay = LocalDate.parse(state.getString("selectedCalendarDay", LocalDate.now().toString())); }
@@ -373,6 +376,7 @@ public final class MainActivity extends LocalizedActivity {
 
     @android.annotation.SuppressLint("GestureBackNavigation") // Default task behavior after our custom Back handling.
     private void handleBack() {
+        if (settingsScreen == null && activeTab == TAB_VOD && onDemandPanel != null && onDemandPanel.back()) return;
         if (settingsScreen != null) { settingsScreen.requestClose(); return; }
         if (activeTab != TAB_HOME) { selectTab(TAB_HOME, true); return; }
         super.onBackPressed();
@@ -607,6 +611,7 @@ public final class MainActivity extends LocalizedActivity {
     }
 
     @Override protected void onDestroy() {
+        if (onDemandPanel != null) onDemandPanel.close();
         lifecycleWork.close();
         if (clockTick != null) handler.removeCallbacks(clockTick);
         if (guideRefreshTick != null) handler.removeCallbacks(guideRefreshTick);
@@ -884,10 +889,17 @@ public final class MainActivity extends LocalizedActivity {
         tabShell.addView(viewport, new LinearLayout.LayoutParams(-1, 0, 1));
         tabPages[TAB_HOME] = page;
         viewport.addView(page, new FrameLayout.LayoutParams(-1, -1));
-        liveContent = addTabContentPage(viewport, TAB_TV);
+        liveContent = new LinearLayout(this);
+        liveContent.setOrientation(LinearLayout.VERTICAL);
+        tabPages[TAB_TV] = liveContent;
+        viewport.addView(liveContent, new FrameLayout.LayoutParams(-1, -1));
         gamesContent = addTabContentPage(viewport, TAB_GAMES);
         eventsContent = addTabContentPage(viewport, TAB_EVENTS);
         savedContent = addTabContentPage(viewport, TAB_SAVED);
+        onDemandContent = new LinearLayout(this);
+        onDemandContent.setOrientation(LinearLayout.VERTICAL);
+        tabPages[TAB_VOD] = onDemandContent;
+        viewport.addView(onDemandContent, new FrameLayout.LayoutParams(-1, -1));
         tabShell.removeView(navigation);
         tabShell.addView(navigation, new LinearLayout.LayoutParams(-1, dp(dockHeight)));
         FrameLayout heroContent = new FrameLayout(this);
@@ -1124,65 +1136,10 @@ public final class MainActivity extends LocalizedActivity {
     }
 
     private void buildLiveTab() {
-
-        if (liveContent.getChildCount() > 0) liveContent.getChildAt(0).setVisibility(View.GONE);
-        LinearLayout liveHeading = new LinearLayout(this);
-        liveHeading.setOrientation(LinearLayout.HORIZONTAL);
-        liveHeading.setGravity(Gravity.CENTER_VERTICAL);
-        liveHeading.setClipChildren(false);
-        liveHeading.setClipToPadding(false);
-        guideSection = liveHeading;
-        LinearLayout titleGroup = new LinearLayout(this);
-        titleGroup.setOrientation(LinearLayout.VERTICAL);
-        titleGroup.setGravity(Gravity.CENTER_VERTICAL);
-        TextView liveTitle = label(AppLanguage.get(R.string.ui_live_tv), 32, LiquidTheme.text(this), true);
-        liveTitle.setTypeface(LiquidTheme.font(this));
-        titleGroup.addView(liveTitle);
-        guideEmpty = label(AppLanguage.get(R.string.ui_explore_the_schedule_see_what_s_on_now_and_set_reminders), 13, MUTED, false);
-        titleGroup.addView(guideEmpty);
-        liveHeading.addView(titleGroup, new LinearLayout.LayoutParams(0, -2, 1));
-
-        guideToggle = actionButton(AppLanguage.get(R.string.ui_open_tv_guide));
-        guideToggle.setContentDescription(AppLanguage.get(R.string.ui_open_full_screen_tv_guide));
-        guideToggle.setOnFocusChangeListener(LiquidTheme::animateContainedFocus);
-        guideToggle.setOnClickListener(view -> openTvGuide());
-        linkTabEntry(TAB_TV, guideToggle);
-        LinearLayout.LayoutParams guideToggleParams = new LinearLayout.LayoutParams(dp(195), dp(44));
-        guideToggleParams.setMargins(dp(4), dp(2), dp(4), dp(2));
-        liveHeading.addView(guideToggle, guideToggleParams);
-
-        LinearLayout.LayoutParams liveHeadingParams = new LinearLayout.LayoutParams(-1, -2);
-        liveHeadingParams.bottomMargin = dp(4);
-        liveContent.addView(liveHeading, liveHeadingParams);
-        liveProgress = new TaskProgress(this, false);
-        liveContent.addView(liveProgress, new LinearLayout.LayoutParams(-1, -2));
-        updateTaskProgress();
-
-        channelRows = new LinearLayout(this);
-        channelRows.setOrientation(LinearLayout.VERTICAL);
-        channelRows.setClipChildren(false);
-        channelRows.setClipToPadding(false);
-        liveContent.addView(channelRows, new LinearLayout.LayoutParams(-1, -2));
-        channelCategoryScroll = new HorizontalScrollView(this);
-        channelCategoryScroll.setHorizontalScrollBarEnabled(false);
-        channelCategoryScroll.setClipChildren(false);
-        channelCategoryScroll.setClipToPadding(false);
-        channelCategoryScroll.setPadding(dp(4), dp(4), dp(4), dp(4));
-        channelCategoryTabs = new LinearLayout(this);
-        channelCategoryTabs.setOrientation(LinearLayout.HORIZONTAL);
-        channelCategoryTabs.setGravity(Gravity.CENTER_VERTICAL);
-        channelCategoryTabs.setClipChildren(false);
-        channelCategoryTabs.setClipToPadding(false);
-        channelCategoryScroll.addView(channelCategoryTabs, new HorizontalScrollView.LayoutParams(-2, -1));
-        channelRows.addView(channelCategoryScroll, new LinearLayout.LayoutParams(-1, dp(50)));
-        channelsEmpty = label(AppLanguage.get(R.string.ui_add_a_playlist_in_settings_to_browse_live_tv), 15, MUTED, false);
-        channelsEmpty.setPadding(0, dp(16), 0, dp(20));
-        status = label(AppLanguage.get(R.string.ui_add_an_m3u_and_optional_xmltv_url_in_settings_to_get_started), 15, MUTED, false);
-        status.setPadding(0, dp(12), 0, 0);
-        liveContent.addView(status);
-        if (liveStatus != null) status.setText(liveStatus);
-        status.setVisibility(liveStatusVisible ? View.VISIBLE : View.GONE);
-
+        liveTvPanel = new LiveTvPanel(this, logoLoader, tabButtons[TAB_TV],
+                this::playChannel, channel -> toggleFavoriteChannel(channel), this::openTvGuide);
+        liveContent.addView(liveTvPanel, new LinearLayout.LayoutParams(-1, -1));
+        linkTabEntry(TAB_TV, liveTvPanel.entryFocus());
     }
 
     private void buildSavedTab() {
@@ -1225,7 +1182,7 @@ public final class MainActivity extends LocalizedActivity {
 
     private void ensureTabBuilt(int tab) {
         if (tab == TAB_TV) {
-            if (channelRows == null) buildLiveTab();
+            if (liveTvPanel == null) buildLiveTab();
             renderChannels();
         } else if (tab == TAB_GAMES) {
             if (gameGrid == null) buildGamesTab();
@@ -1236,12 +1193,20 @@ public final class MainActivity extends LocalizedActivity {
         } else if (tab == TAB_SAVED) {
             if (youtubeRow == null) buildSavedTab();
             renderYouTubeCards();
+        } else if (tab == TAB_VOD) {
+            if (onDemandPanel == null) {
+                onDemandPanel = new OnDemandPanel(this, iptv, logoLoader, tabButtons[TAB_VOD]);
+                onDemandContent.addView(onDemandPanel, new LinearLayout.LayoutParams(-1, -1));
+                linkTabEntry(TAB_VOD, onDemandPanel.entryFocus());
+            }
+            onDemandPanel.onShown();
         }
     }
 
     @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
     private void openTvGuide() {
-        startActivityForResult(new Intent(this, GuideActivity.class).putExtra("category", selectedChannelCategory), 7410);
+        startActivityForResult(new Intent(this, GuideActivity.class).putExtra("category",
+                liveTvPanel == null ? selectedChannelCategory : liveTvPanel.guideCategory()), 7410);
     }
 
     private LinearLayout addTabContentPage(FrameLayout viewport, int tab) {
@@ -1276,14 +1241,14 @@ public final class MainActivity extends LocalizedActivity {
     }
 
     private void linkTabEntry(int tab, View entry) {
-        if (entry == null || tab < TAB_HOME || tab > TAB_SAVED || tabButtons[tab] == null) return;
+        if (entry == null || tab < TAB_HOME || tab > TAB_VOD || tabButtons[tab] == null) return;
         if (entry.getId() == View.NO_ID) entry.setId(View.generateViewId());
         tabButtons[tab].setNextFocusUpId(entry.getId());
         tabEntryFocus[tab] = entry;
     }
 
     private void linkTopControl(int tab, View control) {
-        if (control == null || tab < TAB_HOME || tab > TAB_SAVED) return;
+        if (control == null || tab < TAB_HOME || tab > TAB_VOD) return;
         if (control.getId() == View.NO_ID) control.setId(View.generateViewId());
     }
 
@@ -1347,6 +1312,10 @@ public final class MainActivity extends LocalizedActivity {
             }
             View page = tabPages[activeTab];
             if (focused != null && page != null && isWithinPage(focused, page)) {
+                // Recycled guide/catalogue views handle directional navigation and
+                // focus scrolling themselves, including rows not currently attached.
+                if ((activeTab == TAB_TV && liveTvPanel != null)
+                        || (activeTab == TAB_VOD && onDemandPanel != null)) return super.dispatchKeyEvent(event);
                 if (activeTab == TAB_GAMES && gameGrid != null && isWithinPage(focused, gameGrid)
                         && (direction == View.FOCUS_UP || direction == View.FOCUS_DOWN)) {
                     View item = gameGrid.findContainingItemView(focused);
@@ -1556,7 +1525,7 @@ public final class MainActivity extends LocalizedActivity {
         // Hiding a focused page can synchronously focus a navigation button.
         // Its listener must not start another switch partway through this one.
         if (switchingTabs) return;
-        if (tab < TAB_HOME || tab > TAB_SAVED || tabPages[TAB_HOME] == null) return;
+        if (tab < TAB_HOME || tab > TAB_VOD || tabPages[TAB_HOME] == null) return;
         final int selectedTab = (tab == TAB_TV && isNavigationHidden(tab))
                 || (!tabsInitialized && isNavigationHidden(tab))
                 ? TAB_HOME : tab;
@@ -4054,6 +4023,10 @@ private void updateCalendarDetails(List<PublicCalendarRepository.Event> events) 
     }
 
     private void renderChannels() {
+        if (liveTvPanel != null && activeTab == TAB_TV) {
+            liveTvPanel.setChannels(channels, hiddenChannelKeys, favoriteChannelKeys);
+            return;
+        }
         if (channelRows == null || activeTab != TAB_TV) return;
         IptvRepository.refreshProgrammeDisplay(channels, System.currentTimeMillis());
         List<IptvRepository.Channel> favorites = FavoriteChannels.filterFavorites(channels, hiddenChannelKeys, favoriteChannelKeys);
@@ -4121,6 +4094,7 @@ private void updateCalendarDetails(List<PublicCalendarRepository.Event> events) 
     }
 
     private void refreshCachedProgrammeDisplay() {
+        if (liveTvPanel != null && activeTab == TAB_TV) liveTvPanel.tick();
         IptvRepository.refreshProgrammeDisplay(channels, System.currentTimeMillis());
         for (ChannelRow row : channelRowMap.values()) {
             row.list.post(() -> {
@@ -6777,6 +6751,11 @@ private void updateCalendarDetails(List<PublicCalendarRepository.Event> events) 
                     strokePath.addRoundRect(new RectF(3, 8, 21, 19), 2, 2, Path.Direction.CW);
                     strokePath.moveTo(8, 4); strokePath.lineTo(12, 8); strokePath.lineTo(16, 4);
                     strokePath.moveTo(9, 22); strokePath.lineTo(15, 22); strokePath.moveTo(12, 19); strokePath.lineTo(12, 22);
+                    break;
+                case TAB_VOD:
+                    strokePath.addRoundRect(new RectF(2, 4, 22, 20), 2, 2, Path.Direction.CW);
+                    strokePath.moveTo(2, 8); strokePath.lineTo(22, 8);
+                    fillPath.moveTo(10, 11); fillPath.lineTo(16, 14); fillPath.lineTo(10, 17); fillPath.close();
                     break;
                 case TAB_GAMES:
                     strokePath.moveTo(7, 8); strokePath.lineTo(17, 8);

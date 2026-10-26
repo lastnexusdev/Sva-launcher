@@ -1,0 +1,16 @@
+<resources>
+    <string name="live_all" translatable="false">All Channels</string>
+    <string name="live_full_guide" translatable="false">Full guide</string>
+    <string name="live_on_now" translatable="false">ON NOW</string>
+    <string name="live_coming_up" translatable="false">COMING UP</string>
+    <string name="live_channel" translatable="false">LIVE CHANNEL</string>
+    <string name="live_up_next" translatable="false">Up Next</string>
+    <string name="live_select_channel" translatable="false">Select a channel</string>
+    <string name="live_no_schedule" translatable="false">No guide information</string>
+    <string name="live_favorites" translatable="false">Favorites</string>
+    <string name="live_recent" translatable="false">Recent</string>
+    <string name="live_minutes_left" translatable="false">%1$d min left</string>
+    <string name="live_ok_watch" translatable="false">OK to watch · Hold OK for favorite</string>
+    <string name="live_empty" translatable="false">No channels in this category.</string>
+    <string name="live_channels_hint" translatable="false">%1$d channels · Left/right to browse · OK to watch · Hold OK for favorite</string>
+</resources>

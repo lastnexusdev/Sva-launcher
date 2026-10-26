@@ -26,7 +26,7 @@ final class LauncherBackup {
                 + "selectedApps wallpaper wallpaperAlbum wallpaperFolder photoFolderCacheUri photoFolderCacheImages "
                 + "googlePhotosCacheImages googlePhotosCacheUrl publicCalendarEvents publicCalendarUrl programmeReminders "
                 + "screensaverCacheImages screensaverCacheUrl screensaverAlbum screensaverCaption screensaverTheme "
-                + "appLanguage weatherCache weatherLocationLabel weatherLocationMode youtubeCards liquidGlassMode navigationOrder");
+                + "appLanguage weatherCache weatherLocationLabel weatherLocationMode youtubeCards liquidGlassMode navigationOrder recentLiveChannels");
         register(types, "boolean", "24h customApps guideCollapsed showDate weatherFahrenheit weatherMph "
                 + "youtubeArtworkFeedFallbackTried hideLiveTvNavigation hideGamesNavigation hideEventsNavigation "
                 + "screensaverClock screensaverWeather screensaverEvents");

@@ -36,6 +36,7 @@ import org.json.JSONObject;
 
 @UnstableApi
 public final class PlaybackActivity extends LocalizedActivity {
+    private boolean onDemand;
     private ExoPlayer player;
     private PlayerView playerView;
     private LinearLayout infoPanel;
@@ -68,6 +69,7 @@ public final class PlaybackActivity extends LocalizedActivity {
         try { playback = PlaybackSession.restore(this, getIntent()); }
         catch (Exception ignored) { playback = new Intent(); missingSession = true; }
         String name = playback.getStringExtra("name");
+        onDemand = "true".equals(playback.getStringExtra("onDemand"));
         currentChannelName = name == null ? AppLanguage.get(R.string.ui_channel_879f0b1) : name;
         String streamUrl = playback.getStringExtra("url");
         String licenseUrl = playback.getStringExtra("licenseUrl");
@@ -84,7 +86,7 @@ public final class PlaybackActivity extends LocalizedActivity {
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundColor(Color.BLACK);
         playerView = new PlayerView(this);
-        playerView.setUseController(false);
+        playerView.setUseController(onDemand);
         playerView.setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING);
         frame.addView(playerView, new FrameLayout.LayoutParams(-1, -1));
         infoPanel = new LinearLayout(this);
@@ -133,6 +135,7 @@ public final class PlaybackActivity extends LocalizedActivity {
         messageParams.setMargins(dp(32), 0, dp(32), dp(28));
         frame.addView(infoPanel, messageParams);
         setContentView(frame);
+        if (onDemand) playerView.requestFocus();
         if (!updateProgrammeFromCache()) {
             updateProgramInfo(playback.getStringExtra("now"), playback.getLongExtra("nowStartMs", 0),
                     playback.getLongExtra("nowEndMs", 0), playback.getStringExtra("next"));
@@ -166,14 +169,14 @@ public final class PlaybackActivity extends LocalizedActivity {
             message.setVisibility(View.VISIBLE);
             releasePlayer();
             player = IptvPlayback.create(this, request);
-            player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon()
+            if (!onDemand) player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon()
                     .setPreferredAudioLanguages("hi", "hin")
                     .build());
             playerView.setPlayer(player);
             player.addListener(new Player.Listener() {
                 @Override public void onPlaybackStateChanged(int playbackState) {
                     if (playbackState == Player.STATE_READY) {
-                        message.setText(AppLanguage.get(R.string.ui_playing_up_down_to_change_channel));
+                        message.setText(AppLanguage.get(onDemand ? R.string.vod_playing : R.string.ui_playing_up_down_to_change_channel));
                         hideMessageAfter(2000);
                     }
                     else if (playbackState == Player.STATE_ENDED) message.setText(AppLanguage.get(R.string.ui_stream_ended_back_to_return));
@@ -207,6 +210,7 @@ public final class PlaybackActivity extends LocalizedActivity {
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if (onDemand) return super.dispatchKeyEvent(event);
         if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
             if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_UP && zapChannels != null && zapChannels.length() > 0) { changeChannel(-1); return true; }
             if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_DOWN && zapChannels != null && zapChannels.length() > 0) { changeChannel(1); return true; }

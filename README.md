@@ -4,6 +4,11 @@
 
 <h1 align="center">Sva Launcher</h1>
 
+This fork adds a separate **On Demand** browser beside **Live TV**, with paged
+Movies/Series browsing, a playlist-category sidebar and programme timeline for
+Live TV, and a 128 MiB playlist limit. See [ON_DEMAND.md](ON_DEMAND.md)
+for setup, live-only channel filtering, and build details.
+
 <p align="center">
   <strong>A calm, personal home screen for Android TV.</strong><br />
   Bring apps, live TV, games, calendars, saved videos, weather, and your own photos together in one remote-first interface.

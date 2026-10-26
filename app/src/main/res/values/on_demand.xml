@@ -1,0 +1,20 @@
+<resources>
+    <string name="vod_title" translatable="false">On Demand</string>
+    <string name="vod_movies" translatable="false">Movies</string>
+    <string name="vod_series" translatable="false">Series</string>
+    <string name="vod_category" translatable="false">Category</string>
+    <string name="vod_search" translatable="false">Search</string>
+    <string name="vod_search_hint" translatable="false">Search this category</string>
+    <string name="vod_clear" translatable="false">Clear search</string>
+    <string name="vod_refresh" translatable="false">Refresh</string>
+    <string name="vod_previous" translatable="false">Previous</string>
+    <string name="vod_next" translatable="false">Next</string>
+    <string name="vod_configure" translatable="false">Add your account playlist under Settings → Live TV first.</string>
+    <string name="vod_loading" translatable="false">Loading…</string>
+    <string name="vod_failed" translatable="false">Could not load this content. Check the provider connection and choose Refresh.</string>
+    <string name="vod_empty" translatable="false">No results in this category.</string>
+    <string name="vod_results" translatable="false">%1$d results</string>
+    <string name="vod_page" translatable="false">Page %1$d of %2$d</string>
+    <string name="vod_season" translatable="false">Season %1$s · Episode</string>
+    <string name="vod_playing" translatable="false">Playing · OK for playback controls</string>
+</resources>

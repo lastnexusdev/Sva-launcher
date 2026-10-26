@@ -19,6 +19,72 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public final class IptvRepositoryTest {
+    @Test public void liveOnlyImportSkipsMoviesAndEpisodesButKeepsChannelMetadata() {
+        String playlist = "#EXTM3U\n"
+                + "#EXTINF:-1 group-title=\"Movies\",Movie\nhttps://tv.test/movie/user/pass/1.mp4\n"
+                + "#EXTINF:-1 group-title=\"Series\",Episode\nhttps://tv.test/series/user/pass/2.mkv\n"
+                + "#EXTINF:-1 tvg-id=\"news.one\" tvg-logo=\"https://img.test/news.png\" group-title=\"News\",News\n"
+                + "https://tv.test/live/user/pass/3.ts\n"
+                + "#EXTINF:-1,Other live endpoint\nhttps://tv.test/watch?path=/series/example\n";
+        assertEquals(4, IptvRepository.parseM3u(playlist).size());
+        List<IptvRepository.Channel> live = IptvRepository.parseM3u(playlist, true);
+        assertEquals(2, live.size());
+        assertEquals("news.one", live.get(0).epgId);
+        assertEquals("News", live.get(0).group);
+        assertEquals("https://img.test/news.png", live.get(0).logoUrl);
+        assertEquals("Other live endpoint", live.get(1).name);
+    }
+
+    @Test public void skippedVodDoesNotLeakPlaybackOptionsToLiveChannel() {
+        List<IptvRepository.Channel> live = IptvRepository.parseM3u(
+                "#EXTINF:-1,Movie\n#EXTVLCOPT:http-user-agent=MovieAgent\n"
+                + "#KODIPROP:inputstream.adaptive.license_type=com.widevine.alpha\n"
+                + "https://tv.test/movie/user/pass/1.mp4\n"
+                + "#EXTINF:-1,Live\nhttps://tv.test/live/user/pass/2.ts\n", true);
+        assertEquals(1, live.size());
+        assertTrue(live.get(0).drmType.isEmpty());
+        assertTrue(live.get(0).streamHeaders.isEmpty());
+        assertTrue(IptvRepository.parseM3u("#EXTINF:-1,Truncated\n", true).isEmpty());
+    }
+
+    @Test public void playlistStreamAcceptsMoreThanTheOld24MbLimit() throws Exception {
+        try (java.io.InputStream input = IptvRepository.playlistStream(zeroStream(25L * 1024 * 1024))) {
+            byte[] buffer = new byte[8192];
+            long bytes = 0;
+            int count;
+            while ((count = input.read(buffer)) != -1) bytes += count;
+            assertEquals(25L * 1024 * 1024, bytes);
+        }
+    }
+
+    @Test public void playlistStreamStillRejectsDataBeyond128Mb() throws Exception {
+        try (java.io.InputStream input = IptvRepository.playlistStream(zeroStream(128L * 1024 * 1024 + 1))) {
+            byte[] buffer = new byte[8192];
+            long bytes = 0;
+            while (bytes < 128L * 1024 * 1024) bytes += input.read(buffer);
+            assertEquals(128L * 1024 * 1024, bytes);
+            try {
+                input.read();
+                org.junit.Assert.fail("Oversized playlist must be rejected");
+            } catch (IllegalStateException expected) {
+                assertTrue(expected.getMessage().contains("128"));
+            }
+        }
+    }
+
+    private static java.io.InputStream zeroStream(long length) {
+        return new java.io.InputStream() {
+            long remaining = length;
+            @Override public int read() { return remaining-- > 0 ? 0 : -1; }
+            @Override public int read(byte[] buffer, int offset, int count) {
+                if (remaining <= 0) return -1;
+                int read = (int) Math.min(remaining, count);
+                remaining -= read;
+                return read;
+            }
+        };
+    }
+
     @Test public void parsesMultipleSourceUrlsInOrderAndDropsBlanksAndDuplicates() {
         assertEquals(java.util.Arrays.asList("https://one.test/list.m3u", "https://two.test/list.m3u"),
                 IptvRepository.sourceUrls("  https://one.test/list.m3u\r\n\nhttps://two.test/list.m3u\n"

@@ -6,7 +6,7 @@ import java.util.List;
 /** Stable navigation names in preferences; Home is always outside the reorderable list. */
 final class NavigationPreferences {
     static final String ORDER = "navigationOrder";
-    private static final String[] NAMES = {"live_tv", "games", "events", "saved"};
+    private static final String[] NAMES = {"live_tv", "games", "events", "saved", "on_demand"};
 
     private NavigationPreferences() { }
 
@@ -21,6 +21,8 @@ final class NavigationPreferences {
         defaults.add(2); defaults.add(3); defaults.add(4);
         defaults.add(Math.max(0, Math.min(3, legacyLivePosition)), 1);
         for (int tab : defaults) if (!result.contains(tab)) result.add(tab);
+        // Keep existing stable tab IDs and migrate older saved orders without losing them.
+        if (!result.contains(5)) result.add(result.indexOf(1) + 1, 5);
         return result;
     }
 

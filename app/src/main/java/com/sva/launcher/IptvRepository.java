@@ -43,7 +43,7 @@ final class IptvRepository {
     private static final String CACHE_BACKUP_FILE = "iptv-channels-backup.json";
     private static final long PROGRAMME_CACHE_HORIZON_MS = 48L * 60L * 60L * 1000L;
     private static final int MAX_CACHED_PROGRAMMES_PER_CHANNEL = 128;
-    private static final int MAX_PLAYLIST_BYTES = 24 * 1024 * 1024;
+    private static final int MAX_PLAYLIST_BYTES = 128 * 1024 * 1024;
     private static final int MAX_XML_GUIDE_BYTES = 128 * 1024 * 1024;
     private static final int MAX_JSON_GUIDE_BYTES = 16 * 1024 * 1024;
     private static final String GUIDE_TIME_ZONE = "Asia/Kolkata";
@@ -553,20 +553,40 @@ final class IptvRepository {
         HttpURLConnection connection = openConnection(address);
         try {
             int length = connection.getContentLength();
-            if (length > MAX_PLAYLIST_BYTES) throw new IllegalStateException(AppLanguage.text(R.string.ui_playlist_is_larger_than_24_mb, "Playlist is larger than 24 MB."));
-            try (InputStream stream = new ByteLimitInputStream(connection.getInputStream(), MAX_PLAYLIST_BYTES);
+            if (length > MAX_PLAYLIST_BYTES) throw new IllegalStateException(AppLanguage.text(
+                    R.string.ui_source_exceeds_the_1_s_mb_size_limit, "Source exceeds the %1$s MB size limit.",
+                    MAX_PLAYLIST_BYTES / (1024 * 1024)));
+            try (InputStream stream = playlistStream(connection.getInputStream());
                  BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-                return parseLines(reader);
+                // The fragment is local configuration and is never sent to the provider.
+                return parseLines(reader, "sva-live-only".equals(new URL(address).getRef()));
             }
         } finally { connection.disconnect(); }
     }
 
     static List<Channel> parseM3u(String content) {
-        try { return parseLines(new BufferedReader(new StringReader(content))); }
+        return parseM3u(content, false);
+    }
+
+    static List<Channel> parseM3u(String content, boolean liveOnly) {
+        try { return parseLines(new BufferedReader(new StringReader(content)), liveOnly); }
         catch (Exception ignored) { return new ArrayList<>(); }
     }
 
-    private static List<Channel> parseLines(BufferedReader reader) throws Exception {
+    static InputStream playlistStream(InputStream input) {
+        return new ByteLimitInputStream(input, MAX_PLAYLIST_BYTES);
+    }
+
+    private static boolean isXtreamVodUrl(String address) {
+        try {
+            String path = java.net.URI.create(address).getPath();
+            return path != null && (path.startsWith("/movie/") || path.startsWith("/series/"));
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private static List<Channel> parseLines(BufferedReader reader, boolean liveOnly) throws Exception {
         ArrayList<Channel> channels = new ArrayList<>();
         String name = null, id = "", group = "", logo = "", drmType = "", drmKey = "", mime = "", line;
         Map<String, String> vlcHeaders = StreamOptions.headers(), kodiHeaders = StreamOptions.headers();
@@ -601,6 +621,11 @@ final class IptvRepository {
                     if (!header.isEmpty()) StreamOptions.putHeader(vlcHeaders, header, value);
                 }
             } else if (!line.isEmpty() && !line.startsWith("#") && name != null) {
+                if (liveOnly && isXtreamVodUrl(line)) {
+                    name = null; id = ""; group = ""; logo = ""; drmType = ""; drmKey = ""; mime = "";
+                    vlcHeaders.clear(); kodiHeaders.clear();
+                    continue;
+                }
                 boolean clearKey = StreamOptions.isClearKey(drmType.trim());
                 LicenseData license;
                 String inlineKeys = "";
