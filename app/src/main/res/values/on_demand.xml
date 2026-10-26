@@ -1,4 +1,17 @@
 <resources>
+    <string name="vod_home" translatable="false">Home</string>
+    <string name="vod_tv_shows" translatable="false">TV Shows</string>
+    <string name="vod_provider_categories" translatable="false">PROVIDER CATEGORIES</string>
+    <string name="vod_settings" translatable="false">Settings</string>
+    <string name="vod_watch_now" translatable="false">▶ Watch Now</string>
+    <string name="vod_view_episodes" translatable="false">View Episodes</string>
+    <string name="vod_more_info" translatable="false">ⓘ More Info</string>
+    <string name="vod_newest_categories" translatable="false">Newest additions in each of %1$d provider categories</string>
+    <string name="vod_newest_first" translatable="false">Newest first</string>
+    <string name="vod_see_all" translatable="false">See All ›</string>
+    <string name="vod_search_all_hint" translatable="false">Search all titles in Movies or TV Shows</string>
+    <string name="vod_cast" translatable="false">Cast</string>
+    <string name="vod_director" translatable="false">Director</string>
     <string name="vod_title" translatable="false">On Demand</string>
     <string name="vod_movies" translatable="false">Movies</string>
     <string name="vod_series" translatable="false">Series</string>

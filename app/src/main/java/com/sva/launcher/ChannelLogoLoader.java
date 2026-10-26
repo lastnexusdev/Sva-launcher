@@ -42,15 +42,22 @@ final class ChannelLogoLoader {
             new ThreadPoolExecutor.DiscardOldestPolicy());
 
     ChannelLogoLoader(Context context) {
-        cacheDir = new File(context.getCacheDir(), "channel-logos");
+        this(context, 96, defaultCacheBytes(context), "channel-logos");
+    }
+
+    ChannelLogoLoader(Context context, int maxImageDp, int cacheBytes, String directory) {
+        cacheDir = new File(context.getCacheDir(), directory);
         cacheDir.mkdirs();
-        maxLogoPx = Math.round(96 * context.getResources().getDisplayMetrics().density);
-        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        int memoryClass = activityManager == null ? 128 : activityManager.getMemoryClass();
-        int cacheBytes = Math.max(2 * 1024 * 1024, memoryClass * 1024 * 1024 / 10);
+        maxLogoPx = Math.round(maxImageDp * context.getResources().getDisplayMetrics().density);
         memoryCache = new LruCache<String, Bitmap>(cacheBytes) {
             @Override protected int sizeOf(String key, Bitmap value) { return value.getByteCount(); }
         };
+    }
+
+    private static int defaultCacheBytes(Context context) {
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        int memoryClass = manager == null ? 128 : manager.getMemoryClass();
+        return Math.max(2 * 1024 * 1024, memoryClass * 1024 * 1024 / 10);
     }
 
     void load(String address, ImageView image, View fallback) {

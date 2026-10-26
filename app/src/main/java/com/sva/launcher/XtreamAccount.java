@@ -48,6 +48,11 @@ final class XtreamAccount {
         return api("get_series_info", null) + "&series_id=" + id;
     }
 
+    String vodInfo(String id) {
+        requireId(id);
+        return api("get_vod_info", null) + "&vod_id=" + id;
+    }
+
     String stream(boolean episode, String id, String extension) {
         requireId(id);
         String suffix = extension != null && extension.matches("[A-Za-z0-9]{1,8}") ? extension : "mp4";

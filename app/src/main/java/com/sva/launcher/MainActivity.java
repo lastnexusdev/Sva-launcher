@@ -1195,7 +1195,7 @@ public final class MainActivity extends LocalizedActivity {
             renderYouTubeCards();
         } else if (tab == TAB_VOD) {
             if (onDemandPanel == null) {
-                onDemandPanel = new OnDemandPanel(this, iptv, logoLoader, tabButtons[TAB_VOD]);
+                onDemandPanel = new OnDemandPanel(this, iptv, logoLoader, tabButtons[TAB_VOD], this::showSettings);
                 onDemandContent.addView(onDemandPanel, new LinearLayout.LayoutParams(-1, -1));
                 linkTabEntry(TAB_VOD, onDemandPanel.entryFocus());
             }

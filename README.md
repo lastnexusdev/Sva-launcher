@@ -5,7 +5,8 @@
 <h1 align="center">Sva Launcher</h1>
 
 This fork adds a separate **On Demand** browser beside **Live TV**, with paged
-Movies/Series browsing, a playlist-category sidebar and programme timeline for
+Movies/TV Shows browsing with compact newest-by-category poster shelves,
+a playlist-category sidebar and programme timeline for
 Live TV, and a 128 MiB playlist limit. See [ON_DEMAND.md](ON_DEMAND.md)
 for setup, live-only channel filtering, and build details.
 

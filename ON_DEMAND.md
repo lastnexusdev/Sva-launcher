@@ -20,16 +20,28 @@ Configure the provider's authenticated M3U URL in **Settings → Live TV**.
 On Demand derives the Xtream-compatible account from that saved URL; credentials
 are entered on the device and must never be committed to this repository.
 
-On Demand includes Movies and Series, provider categories, search within the
-selected category, and Previous/Next pages. Select a series to browse its episodes;
-Back returns to the catalogue. Movie and episode playback supports the player's
-pause and seek controls. It does not use the live-channel zapping controls.
+On Demand uses a provider-category sidebar and a compact, full-height poster area.
+Movies and TV Shows each have a landing page prefilled with the
+newest 12 titles from every nonempty category, keeping the provider's category
+names and order. There is no featured banner, Continue Watching row, or
+watch-progress tracking. Select a poster to play a movie or open a series; hold OK
+on a poster for More Info, including available plot, cast, year and duration.
 
-Provider JSON is read as a stream, retaining at most 120 results per page rather
-than holding the full movie/episode catalogue in the launcher's heap. Cover art
-uses the existing bounded image loader. A network error leaves Refresh available.
-Catalogue listings require a provider connection; only cover art uses the existing
-disk cache. This is not an offline movie library or download manager.
+Newest means the provider's `added` timestamp for movies or `last_modified` for
+series, with descending media IDs as a stable fallback/tie breaker. It does not
+claim that a newly added older film was released recently. Selecting a category
+or See All opens newest-first paging. Search on the landing page covers all titles
+in the current media type; search within a category stays scoped to it. Select a
+series for its episodes; Back returns to the previous catalogue or landing page.
+Movie and episode playback supports pause and seek, separately from live zapping.
+
+Provider JSON is read as a stream. Bounded heaps retain 12 entries per landing-page
+category or 120 per browse page; cursor paging does not retain the whole catalogue
+or grow a heap for deeper pages. Posters use a bounded image cache. Full metadata
+is requested only when More Info is opened and cached for up to 32 titles.
+Landing data refreshes on re-entry after ten minutes, or via Refresh.
+A network error leaves Refresh available. Catalogue listings require a connection;
+artwork has a bounded disk cache. This is not an offline movie downloader.
 
 ## Larger playlists and live-only import
 
